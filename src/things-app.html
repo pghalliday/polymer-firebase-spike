@@ -1,0 +1,143 @@
+<!--
+@license
+Copyright (c) 2016 The Polymer Project Authors. All rights reserved.
+This code may only be used under the BSD style license found at http://polymer.github.io/LICENSE.txt
+The complete set of authors may be found at http://polymer.github.io/AUTHORS.txt
+The complete set of contributors may be found at http://polymer.github.io/CONTRIBUTORS.txt
+Code distributed by Google as part of the polymer project is also
+subject to an additional IP rights grant found at http://polymer.github.io/PATENTS.txt
+-->
+
+<link rel="import" href="../bower_components/polymer/polymer.html">
+<link rel="import" href="../bower_components/polymerfire/firebase-auth.html">
+<link rel="import" href="../bower_components/app-route/app-location.html">
+<link rel="import" href="../bower_components/app-route/app-route.html">
+<link rel="import" href="../bower_components/app-layout/app-header-layout/app-header-layout.html">
+<link rel="import" href="../bower_components/app-layout/app-header/app-header.html">
+<link rel="import" href="../bower_components/app-layout/app-toolbar/app-toolbar.html">
+<link rel="import" href="../bower_components/app-layout/app-scroll-effects/effects/waterfall.html">
+<link rel="import" href="../bower_components/paper-icon-button/paper-icon-button.html">
+<link rel="import" href="../bower_components/iron-icons/iron-icons.html">
+<link rel="import" href="../bower_components/iron-pages/iron-pages.html">
+
+<dom-module id="things-app">
+  <template>
+    <style>
+      app-header {
+        background-color: black;
+        color: white;
+      }
+    </style>
+
+    <firebase-auth
+        id="auth"
+        app-name="things"
+        provider="google"
+        signed-in="{{signedIn}}"
+        user="{{user}}">
+    </firebase-auth>
+
+    <app-location route="{{route}}"></app-location>
+
+    <app-route
+        route="{{route}}"
+        pattern="/:page"
+        data="{{routeData}}"
+        tail="{{subroute}}"></app-route>
+
+    <app-route
+        route="{{subroute}}"
+        pattern="/:page"
+        data="{{subrouteData}}"></app-route>
+
+    <app-header-layout fullbleed>
+      <app-header fixed condenses effects="waterfall">
+        <app-toolbar>
+          <div main-title>Things</div>
+          <paper-icon-button icon="[[computeLockIcon(signedIn)]]" on-tap="toggleSignIn"></paper-icon-button>
+        </app-toolbar>
+      </app-header>
+
+      <iron-pages
+          selected="[[page]]"
+          attr-for-selected="name"
+          fallback-selection="404"
+          role="main">
+        <things-list name="things-list"></list>
+        <detail name="detail"></detail>
+        <error-404 name="error-404"></404>
+      </iron-pages>
+
+    </app-header-layout>
+
+  </template>
+
+  <script>
+    Polymer({
+      is: 'things-app',
+
+      properties: {
+        subpage: {
+          type: String,
+          reflectToAttribute: true,
+          observer: '_subpageChanged',
+        },
+        page: {
+          type: String,
+          reflectToAttribute: true,
+          observer: '_pageChanged',
+        },
+        signedIn: {
+          type: Boolean,
+          reflectToAttribute: true,
+          observer: '_authChanged',
+        },
+      },
+
+      observers: [
+        '_subroutePageChanged(subrouteData.page)',
+        '_routePageChanged(routeData.page)',
+      ],
+
+      computeLockIcon: function(signedIn) {
+        console.log('computeLockIcon(' + signedIn + ')');
+        return signedIn ? 'lock-open' : 'lock';
+      },
+
+      toggleSignIn: function() {
+        console.log('toggleSignIn');
+        return this.signedIn ? this.$.auth.signOut() : this.$.auth.signInWithPopup();
+      },
+
+      _subroutePageChanged: function(page) {
+        this.subpage = page;
+      },
+
+      _routePageChanged: function(page) {
+        this.page = page || 'things-list';
+      },
+
+      _subpageChanged: function(subpage) {
+        console.log(subpage);
+        // Load page import on demand. Show 404 page if fails
+        var resolvedPageUrl = this.resolveUrl('detail.html');
+        this.importHref(resolvedPageUrl, null, this._showPage404, true);
+      },
+
+      _pageChanged: function(page) {
+        console.log(page);
+        // Load page import on demand. Show 404 page if fails
+        var resolvedPageUrl = this.resolveUrl(page + '.html');
+        this.importHref(resolvedPageUrl, null, this._showPage404, true);
+      },
+
+      _authChanged: function(signedIn) {
+        console.log(signedIn);
+      },
+
+      _showPage404: function() {
+        this.page = 'error-404';
+      },
+    });
+  </script>
+</dom-module>
